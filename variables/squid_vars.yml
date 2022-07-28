@@ -1,4 +1,4 @@
-pkg: [httpd-tools, python-pip, python3]
+pkg: [httpd-tools, python-pip]
 squid_port: 3128
 permitted: "192.168.0.0/16"
 authenticate: true

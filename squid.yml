@@ -26,10 +26,11 @@
         update_cache: true
       when: epel_repo.changed
 
-    # - name: Installing Squid and its Deps
-    #   yum: 
-    #     name: "{{ pkg }}"
-    #     state: present
+    - name: Installing Squid and its Deps
+      yum: 
+        name: "{{ pkg }}"
+        state: present
+      delegate_to: 127.0.0.1
 
     - name: Installing htpasswd dependency
       pip:
