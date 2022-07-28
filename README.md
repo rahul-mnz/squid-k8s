@@ -1,6 +1,6 @@
-# Ansible Script For Squid and HAProxy Setup
+# Ansible Script For Squid Setup
 
-## Steps to Run Squid Automation Script 
+##  To Run Squid Ansible Script 
 <ol>
     <li> Update the list of servers in myhosts file under Squid group.</li>
     <li> Check the ansible.cfg and update the remote_user.</li>
@@ -40,3 +40,6 @@ Password for username which can access to squid proxy.
 ##### namespace
 
 Namespace of K8s on which to create the Deployments
+
+### Note:- 
+The Configuration of squid is being created locally, and passed to k8s through configMap. Thats why the some of the task runs on the host system.
