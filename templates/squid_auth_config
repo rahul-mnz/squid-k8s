@@ -1,0 +1,4 @@
+auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/auth_conf
+auth_param basic credentialsttl 24 hours
+auth_param basic realm Squid proxy-caching web server
+acl authenticated proxy_auth REQUIRED

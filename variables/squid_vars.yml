@@ -1,0 +1,7 @@
+pkg: [httpd-tools, python-pip, python3]
+squid_port: 3128
+permitted: "192.168.0.0/16"
+authenticate: true
+auth_username: "squid"
+auth_password: "123456"
+namespace: "default"

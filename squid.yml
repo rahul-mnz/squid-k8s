@@ -1,0 +1,116 @@
+---
+- name: Setup Proxy
+  hosts: squid
+  become: false
+  vars_files:
+    - variables/squid_vars.yml 
+  tasks:
+
+    - name: Create path
+      file:
+        path: /var/squid
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
+        mode: 0775
+        recurse: yes
+
+    - name: enable epel Repo
+      yum:
+        name: epel-release
+        state: present
+      register: epel_repo
+    
+    - name: update yum cache
+      yum:
+        update_cache: true
+      when: epel_repo.changed
+
+    # - name: Installing Squid and its Deps
+    #   yum: 
+    #     name: "{{ pkg }}"
+    #     state: present
+
+    - name: Installing htpasswd dependency
+      pip:
+        name: passlib
+      delegate_to: 127.0.0.1  
+
+    - name: Authentication 
+      htpasswd:
+        path: templates/auth_conf
+        name: "{{ auth_username }}"
+        password: "{{ auth_password }}"
+      when: authenticate
+      delegate_to: 127.0.0.1
+
+    - name: Copy Deployment YML file
+      ansible.builtin.template:
+        src: "templates/squid_deployment.yml.j2"
+        dest: "/var/squid/squid_deployment.yml"
+
+    - name: Squid Proxy configurations
+      ansible.builtin.template:
+        src: "templates/squid.conf.j2"
+        dest: "templates/squid.conf"
+      delegate_to: 127.0.0.1
+      register: squid_conf
+
+    - name: Updating the Auth Config
+      blockinfile:
+        path: "templates/squid.conf"
+        insertafter: "# Auth"
+        block: "{{ lookup('ansible.builtin.file', 'templates/squid_auth_config') }}"
+        state: present    
+      when: authenticate
+      register: auth_ena
+      delegate_to: 127.0.0.1
+
+    - name: Enable authenticated ACl
+      replace:
+        path: "templates/squid.conf"
+        regexp: 'permitted domain_list'
+        replace: 'permitted authenticated domain_list'
+      when: authenticate
+      delegate_to: 127.0.0.1
+
+
+    - name: Create configmap 
+      kubernetes.core.k8s:
+        namespace: "{{ namespace }}"
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: squid-config
+          data:
+            squid.conf: |
+              {{ lookup("template", "templates/squid.conf") }}
+            domain_list.acl: |
+              {{ lookup("template", "templates/domain_list.acl") }}
+            auth_conf: |
+              {{ lookup("template", "templates/auth_conf") }}
+      register: configmap
+
+    - name: Apply metrics-server manifest to the cluster.
+      kubernetes.core.k8s:
+        namespace: "{{ namespace }}"
+        state: present
+        src: /var/squid/squid_deployment.yml
+
+    - name: Apply metrics-server manifest to the cluster.
+      kubernetes.core.k8s:
+        namespace: "{{ namespace }}"
+        state: patched
+        src: /var/squid/squid_deployment.yml
+      when: configmap.changed
+
+    - name: Firewall Approval
+      firewalld:
+       port: "{{ squid_port }}/tcp"
+       state: enabled
+       immediate: yes
+       permanent: yes
+      vars:
+        ansible_become: true
+        ansible_python_interpreter: /usr/bin/python

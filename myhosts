@@ -1,0 +1,6 @@
+[haproxy]
+192.168.81.99
+[squid]
+192.168.81.99
+[squid:vars]
+ansible_python_interpreter=/usr/bin/python3
